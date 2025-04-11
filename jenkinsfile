@@ -1,0 +1,56 @@
+def COLOR_MAP = [
+
+    'SUCCESS': 'good',
+
+    'FAILURE': 'danger',
+
+    ]
+
+pipeline {
+    agent any
+    
+    tools{
+        terraform 'Terraform'
+    }
+    
+    environment {
+        //Credentials for Prod environment
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID') 
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+    }
+
+    stages {
+        stage('SCM checkout') {
+            steps {
+                echo 'Cloning codebase jenkins server.'
+                echo 'Testing CI codebase with jenkins server.'
+                git branch: 'main', credentialsId: 'b10cefab-5f8c-494b-a144-8882e05fcfb6', url: 'https://github.com/NUPUKU/airbnb-tf-infra.git'
+                sh 'ls'
+            }
+        }
+        
+        stage('Terraform init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Terraform plan') {
+                    steps {
+                        sh 'terraform plan'
+                    }
+                }
+                
+        stage('terraform action to apply of destroy plan') {
+                    steps {
+                        sh 'terraform ${action} --auto-approve'
+                    }
+                }
+        } 
+
+          post { 
+        always { 
+            echo 'Sending build result!'
+            slackSend channel: "#et-devops-team", color:COLOR_MAP[currentBuild.currentResult], message: "Build Startd By Fred : ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+        }
+    }    
+    }
